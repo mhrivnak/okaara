@@ -81,6 +81,21 @@ class Option(object):
     def __str__(self):
         return 'Option [%s]' % self.name
 
+    @property
+    def keyword(self):
+        """
+        Returns the keyword the option will be stored under when parsed.
+
+        :return: keyword to look up in the method handling the command
+        :rtype:  str
+        """
+        # Handle single character v. multiple character names, e.g.
+        # -v versus --verbose
+        prefix_len = 1 # always at least 1 -
+        if self.name[1] == '-': # always at least 2 chars; this is safe
+            prefix_len = 2
+        return self.name[prefix_len:]
+
 class Flag(Option):
     """
     Specific form of an option that does not take a value; it is meant to be
@@ -421,7 +436,12 @@ class Command(object):
         :type  exception: Exception
         """
         prompt.write(_('Validation failed for argument [%s]:') % option.name)
-        prompt.write('  %s' % exception.args[0])
+        try:
+            prompt.write('  %s' % exception.args[0])
+        # Python 2.4 and older does not have an 'args' attribute on Exception.
+        # There is also no guarantee that 'args' (an iterable) will have a member.
+        except (AttributeError, IndexError):
+            pass
 
     def print_command_usage(self, prompt, missing_required=None, indent=0, step=2):
         """
@@ -785,6 +805,12 @@ class Cli(object):
         self.add_section(subsection)
         return subsection
 
+    def create_subsection(self, name, description):
+        """
+        Syntactic sugar method that functions identical to create_section.
+        """
+        return self.create_section(name, description)
+
     def create_command(self, name, description, method, usage_description=None, parser=None):
         """
         Creates a new command in this section. The given name must be
@@ -833,6 +859,12 @@ class Cli(object):
         """
         return self.root_section.find_subsection(name)
 
+    def find_subsection(self, name):
+        """
+        Syntactic sugar method that functions identical to find_section.
+        """
+        return self.find_section(name)
+
     def find_command(self, name):
         """
         Returns the command under this section with the given name.
@@ -857,6 +889,12 @@ class Cli(object):
         :rtype:  Section
         """
         return self.root_section.remove_subsection(name)
+
+    def remove_subsection(self, name):
+        """
+        Syntactic sugar method that functions identical to remove_section.
+        """
+        return self.remove_section(name)
 
     def remove_command(self, name):
         """

@@ -3,7 +3,7 @@
 # -- headers ------------------------------------------------------------------
 
 Name:           python-okaara
-Version:        1.0.24
+Version:        1.0.26
 Release:        1%{?dist}
 Summary:        Python command line utilities
 
@@ -39,7 +39,6 @@ for lang in `ls po/*.po` ; do
         -o po/build/$lang/LC_MESSAGES/okaara.mo;
 done
 
-
 # -- install ------------------------------------------------------------------
 
 %install
@@ -55,6 +54,8 @@ cp -R po/build/* $RPM_BUILD_ROOT/%{_datadir}/locale/
 
 # -- check --------------------------------------------------------------------
 
+%check
+nosetests
 
 # -- clean --------------------------------------------------------------------
 
@@ -71,6 +72,22 @@ rm -rf $RPM_BUILD_ROOT
 # -- changelog ----------------------------------------------------------------
 
 %changelog
+* Fri Aug 24 2012 Jay Dobies <jason.dobies@redhat.com> 1.0.26-1
+- Added syntactic sugar methods to the CLI (jason.dobies@redhat.com)
+- Added keyword property to the Option class (jason.dobies@redhat.com)
+
+* Fri Aug 24 2012 Jay Dobies <jason.dobies@redhat.com> 1.0.25-1
+- fixing a bug where an Exception instance was assumed to have an attribute not
+  present in python <2.5, and that attribute was assumed to have a non-
+  guaranteed value. (mhrivnak@redhat.com)
+- Add i18n support. (jbowes@repl.ca)
+- Fixed incorrect package_dir after moving setup.py to root
+  (jason.dobies@redhat.com)
+- add some more info to setup.py (jbowes@repl.ca)
+- spec: nosetests can run from the toplevel src dir (jbowes@repl.ca)
+- Move setup.py to the toplevel (jbowes@repl.ca)
+- Added column alignment capabilities (jason.dobies@redhat.com)
+
 * Thu Jul 26 2012 Jay Dobies <jason.dobies@redhat.com> 1.0.24-1
 - Added interruptable handling to prompt_password (jason.dobies@redhat.com)
 - Changed table and col width to be non-instance to make life a whole lot
