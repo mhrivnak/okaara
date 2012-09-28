@@ -10,24 +10,24 @@
 from setuptools import setup, find_packages
 
 setup(
-        name='okaara',
-        version='1.0.26',
-        description='Python command line utilities',
-        url='http://jdob.fedorapeople.org/okaara/',
-        license='GPLv2',
+    name='okaara',
+    version='1.0.26',
+    description='Python command line utilities',
+    url='http://jdob.fedorapeople.org/okaara/',
+    license='GPLv2',
 
-        author='Jay Dobies',
-        author_email='jdobies@gmail.com',
+    author='Jay Dobies',
+    author_email='jdobies@gmail.com',
 
-        package_dir={'': 'src'},
-        packages = find_packages('src'),
+    package_dir={'': 'src'},
+    packages = find_packages('src'),
 
-        test_suite = 'nose.collector',
+    test_suite = 'nose.collector',
 
-        classifiers = [
-            'License :: OSI Approved :: GNU General Public License (GPL)',
-            'Intended Audience :: Developers',
-            'Intended Audience :: Information Technology',
-            'Programming Language :: Python'
-        ],
+    classifiers = [
+        'License :: OSI Approved :: GNU General Public License (GPL)',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Information Technology',
+        'Programming Language :: Python'
+    ],
 )
