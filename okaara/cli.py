@@ -1,12 +1,20 @@
-# This software is licensed to you under the GNU General Public License,
-# version 2 (GPLv2). There is NO WARRANTY for this software, express or
-# implied, including the implied warranties of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
-# along with this software; if not, see
-# http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
+# Copyright (c) 2011-2013 Jason Dobies
+#
+# This file is part of Okaara.
+#
+# Okaara is free software: you can redistribute it and/or modify it under the terms of the
+# GNU General Public License as published by the Free Software Foundation, either version 3
+# of the License, or (at your option) any later version.
+#
+# Okaara is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with Okaara.
+# If not, see <http://www.gnu.org/licenses/>.
 
 import gettext
-from optparse import OptionParser, Values
+from optparse import OptionParser, Values, BadOptionError
 import os
 import sys
 
@@ -24,18 +32,25 @@ class InvalidStructure(Exception):
     """
     pass
 
+
 class CommandUsage(Exception):
     """
     Indicates the command parameters were incorrect. If the usage error was the
     lack of required parameters, all required parameters that were missing can
     be specified.
 
-    :param missing_options: optional list of options that are required but missing
-    :type  missing_options: list of L{Option}
+    :param missing_options: optional list of missing required options
+    :type  missing_options: list of Option
+
+    :param unexpected_options: list of option names that are not defined on the
+                               command but were specified
+    :type  unexpected_options: list of str
     """
-    def __init__(self, missing_options=None):
+    def __init__(self, missing_options=None, unexpected_options=None):
         Exception.__init__(self)
         self.missing_options = missing_options
+        self.unexpected_options = unexpected_options
+
 
 class OptionValidationFailed(Exception):
     """
@@ -59,6 +74,32 @@ class NoCatchErrorParser(OptionParser):
         # The CLI will take care of formatting the options for a --help call,
         # so do nothing here.
         pass
+
+    def parse_args(self, args=None, values=None):
+        """
+        Copied directly from optparse with the change that an exception on
+        _process_args isn't passed to error but rather converted into a
+        CommandUsage. Bad optparse, passing a string version of the exception
+        to error instead of the programmatically accessible data and letting
+        error() do with it as it wishes.
+        """
+        rargs = self._get_args(args)
+        if values is None:
+            values = self.get_default_values()
+
+        self.rargs = rargs
+        self.largs = largs = []
+        self.values = values
+
+        try:
+            self._process_args(largs, rargs, values)
+        except BadOptionError, e:
+            # Raise with the data, not a string version of the exception
+            raise CommandUsage(unexpected_options=[e.opt_str])
+
+        args = largs + rargs
+        return self.check_values(values, args)
+
 
 class Option(object):
     """
@@ -91,6 +132,7 @@ class Option(object):
         """
         return self.name.lstrip('-')
 
+
 class Flag(Option):
     """
     Specific form of an option that does not take a value; it is meant to be
@@ -98,6 +140,7 @@ class Flag(Option):
     """
     def __init__(self, name, description, aliases=None):
         Option.__init__(self, name, description, required=False, allow_multiple=False, aliases=aliases)
+
 
 class OptionGroup(object):
     """
@@ -123,6 +166,7 @@ class OptionGroup(object):
         :type  option: Option
         """
         self.options.append(option)
+
 
 class Command(object):
     """
@@ -170,12 +214,11 @@ class Command(object):
             return os.EX_DATAERR
 
         # Make sure all of the required arguments have been specified
-
         missing_required = [o for o in self.all_options() \
                             if o.required and (not kwarg_dict.has_key(o.name) or
                                                kwarg_dict[o.name] is None)]
         if len(missing_required) > 0:
-            raise CommandUsage(missing_required)
+            raise CommandUsage(missing_options=missing_required)
 
         # Flag entries that are not specified are parsed as None, but I'd rather
         # them explicitly be set to false. Iterate through each flag explicitly
@@ -288,7 +331,7 @@ class Command(object):
         :type  parse_func: callable
 
         :return: instance representing the option
-        :rtype:  PulpCliOption
+        :rtype:  Option
         """
         option = Option(name, description, required=required, allow_multiple=allow_multiple, aliases=aliases,
                         default=default, validate_func=validate_func, parse_func=parse_func)
@@ -326,7 +369,7 @@ class Command(object):
         :type  aliases: list
 
         :return: instance representing the flag
-        :rtype:  PulpFliFlag
+        :rtype:  Flag
         """
         flag = Flag(name, description, aliases=aliases)
         self.add_option(flag)
@@ -430,7 +473,8 @@ class Command(object):
         except (AttributeError, IndexError):
             pass
 
-    def print_command_usage(self, prompt, missing_required=None, indent=0, step=2):
+    def print_command_usage(self, prompt, missing_required=None, unexpected=None,
+                            indent=0, step=2):
         """
         Prints the details of a command, including all options that can be
         specified to it.
@@ -441,6 +485,10 @@ class Command(object):
         :param missing_required: list of required options that were not
                                  specified on an invocation of the CLI
         :type  missing_required: list of Option
+
+        :param unexpected: list of specified option names that do not exist
+                           on the command
+        :type  unexpected: list of str
 
         :param indent: number of spaces to indent the command
         :type  indent: int
@@ -507,10 +555,14 @@ class Command(object):
                 prompt.write('')
 
         if missing_required:
-            prompt.write('')
             prompt.write(_('The following options are required but were not specified:'))
             for r in missing_required:
                 prompt.write('%s%s' % (' ' * (indent + step), r.name))
+
+        if unexpected:
+            prompt.write(_('The following options were specified but do not exist on the command:'))
+            for u in unexpected:
+                prompt.write('%s%s' % (' ' * (indent + step), u))
 
 
 class Section(object):
@@ -583,7 +635,7 @@ class Section(object):
         :type  parser: OptionParser
 
         :return: instance representing the newly added command
-        :rtype:  PulpCliCommand
+        :rtype:  Command
         """
         command = Command(name, description, method, usage_description=usage_description, parser=parser)
         self.add_command(command)
@@ -606,7 +658,7 @@ class Section(object):
         :type  description: str
 
         :return: instance representing the newly added section
-        :rtype:  PulpCliSection
+        :rtype:  Section
         """
         subsection = Section(name, description)
         self.add_subsection(subsection)
@@ -684,13 +736,12 @@ class Section(object):
         :type  step: int
         """
         launch_script = os.path.basename(sys.argv[0])
-        if self.name != '':
-            prompt.write(_('Usage: %s %s [SUB_SECTION, ..] COMMAND') % (launch_script, self.name))
+        prompt.write(_('Usage: %s [SUB_SECTION, ..] COMMAND') % launch_script)
+
+        if self.description:
             prompt.write(_('Description: %s') % self.description)
-            prompt.write('')
-        else:
-            prompt.write(_('Usage: %s [SECTION, ..] COMMAND') % launch_script)
-            prompt.write('')
+
+        prompt.write('')
 
         if len(self.subsections) > 0:
             max_width = reduce(lambda x, y: max(x, len(y)), self.subsections, 0)
@@ -730,6 +781,7 @@ class Section(object):
         # Make sure there isn't already a command with the same name
         if self.commands.has_key(name):
             raise InvalidStructure()
+
 
 class Cli(object):
     """
@@ -786,7 +838,7 @@ class Cli(object):
         :type  description: str
 
         :return: instance representing the newly added section
-        :rtype:  PulpCliSection
+        :rtype:  Section
         """
         subsection = Section(name, description)
         self.add_section(subsection)
@@ -795,6 +847,8 @@ class Cli(object):
     def create_subsection(self, name, description):
         """
         Syntactic sugar method that functions identical to create_section.
+
+        :rtype: Section
         """
         return self.create_section(name, description)
 
@@ -828,7 +882,7 @@ class Cli(object):
         :type  parser: OptionParser
 
         :return: instance representing the newly added command
-        :rtype:  PulpCliCommand
+        :rtype:  Command
         """
         command = Command(name, description, method, usage_description=usage_description, parser=parser)
         self.add_command(command)
@@ -925,7 +979,9 @@ class Cli(object):
 
                 return exit_code
             except CommandUsage, e:
-                command_or_section.print_command_usage(self.prompt, missing_required=e.missing_options)
+                command_or_section.print_command_usage(
+                    self.prompt, missing_required=e.missing_options,
+                    unexpected=e.unexpected_options)
                 return os.EX_USAGE
 
     def print_cli_map(self, indent=-2, step=2, show_options=False, section_color=None, command_color=None):
@@ -1001,8 +1057,25 @@ class Cli(object):
     def _find_closest_match(self, base_section, args):
         """
         Searches the CLI structure for the command that matches the path in the
-        given arguments. If no command is found, a tuple of None references
+        given arguments. If no command is found, the closest matching section
         is returned.
+
+        For example, given the command: foo bar baz
+        - If baz is a command in the correct location, the baz Command instance
+          is returned
+        - If baz is not a valid command but foo->bar is a valid section
+          hierarchy, the bar Section instance is returned
+        - If bar is not a valid section but foo is, the foo Section instance
+          is returned
+
+        Also returned are the remaining arguments that were not parsed.
+        For example: foo bar baz --k v
+        - If baz is a valid command, the second entry in the returned tuple will
+          be a list of ['--k', 'v']
+        - If baz is not a valid command but bar is a valid section, the returned
+          list of args will be ['baz', '--k', 'v']
+        - If bar is not a valid section, the args returned are
+          ['bar', 'baz', '--k', 'v']
 
         :param base_section: root section from which to begin the search
         :type  base_section: Section
@@ -1027,24 +1100,22 @@ class Cli(object):
         if command is not None:
             return command, args[1:]
 
-        # If we're not at a command yet, recurse into the next level of subsections
-        found_in_subsection = None
-        sub_args = None
-
         # Find the subsection
         subsection = base_section.find_subsection(find_me)
         if subsection is not None:
 
             # Don't recurse if we're at a section and the next argument is an option
-            if len(args) > 1 and args[1].startswith('--'):
+            if len(args) > 1 and args[1].startswith('-'):
                 return subsection, args[1:]
 
             found_in_subsection, sub_args = self._find_closest_match(subsection, args[1:])
+            return found_in_subsection, sub_args
 
+        # If we got this far, we didn't find a matching command or subsection,
+        # so return where we are as the closest match
+        return base_section, args # even include the bad one in the args
 
-        return found_in_subsection, sub_args
-
-# -- parsers ------------------------------------------------------------------
+# -- arg parsers --------------------------------------------------------------
 
 class UnknownArgsParser(object):
     """
@@ -1064,7 +1135,7 @@ class UnknownArgsParser(object):
     def __init__(self, prompt, path, required_options=None, exit_on_abort=True):
         """
         @param prompt: prompt instance to write the usage to
-        @type  prompt: PulpPrompt
+        @type  prompt: Prompt
 
         @param path: section/command path to reach the command currently executing
         @type  path: str
@@ -1086,11 +1157,9 @@ class UnknownArgsParser(object):
 
     def parse_args(self, args):
         """
-        Parses arguments to add/update importer/distributor. Since the possible
-        arguments are contingent on the type of plugin and thus not statically
-        defined, we can't simply use optparse to gather them. This method will
-        parse through the argument list and attempt to resolve the arguments into
-        key/value pairs.
+        Parses arguments where the list of possible arguments isn't known ahead
+        of time. This method will parse through the argument list and attempt to
+        resolve the arguments into key/value pairs.
 
         The keys will be the name of the argument with any leading hyphens removed.
         The value will be one of three possibilties:
@@ -1173,16 +1242,14 @@ class UnknownArgsParser(object):
     def usage(self):
         launch_script = os.path.basename(sys.argv[0])
         self.prompt.write(_('Usage: %s %s [OPTION, ..]') % (launch_script, self.path))
-        self.prompt.render_spacer()
+        self.prompt.write('')
 
-        m  = _('Options will vary based on the type of server-side plugin '
-               'being used. Valid options follow one of the following '
-               'formats:')
+        m  = _('Valid options follow one of the following formats:')
         self.prompt.write(m)
 
         self.prompt.write(_('  --<option> <value>'))
         self.prompt.write(_('  --<flag>'))
-        self.prompt.render_spacer()
+        self.prompt.write('')
 
         if len(self.required_options) > 0:
             self.prompt.write(_('The following options are required:'))
@@ -1209,6 +1276,7 @@ class UnknownArgsParser(object):
         else:
             raise exception_class('Parsing aborted')
 
+
 class PassThroughParser(object):
     """
     Duck-typed parser that can be passed to a Command. This implementation won't
@@ -1220,7 +1288,7 @@ class PassThroughParser(object):
     def __init__(self, prompt, path):
         """
         @param prompt: prompt instance to write the usage to
-        @type  prompt: PulpPrompt
+        @type  prompt: Prompt
 
         @param path: section/command path to reach the command currently executing
         @type  path: str

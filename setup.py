@@ -11,16 +11,15 @@ from setuptools import setup, find_packages
 
 setup(
         name='okaara',
-        version='1.0.26',
+        version='1.0.32',
         description='Python command line utilities',
-        url='http://jdob.fedorapeople.org/okaara/',
+        url='https://okaara.readthedocs.org/en/latest/',
         license='GPLv2',
 
         author='Jay Dobies',
         author_email='jdobies@gmail.com',
 
-        package_dir={'': 'src'},
-        packages = find_packages('src'),
+        packages = find_packages(),
 
         test_suite = 'nose.collector',
 

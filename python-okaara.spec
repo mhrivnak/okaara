@@ -3,7 +3,7 @@
 # -- headers ------------------------------------------------------------------
 
 Name:           python-okaara
-Version:        1.0.26
+Version:        1.0.32
 Release:        1%{?dist}
 Summary:        Python command line utilities
 
@@ -18,6 +18,8 @@ BuildRequires:  python-nose
 BuildRequires:  python-setuptools
 BuildRequires:  python-babel
 BuildRequires:  python2-devel
+
+Requires:       python-setuptools
 
 %description
 Python library to facilitate the creation of command-line interfaces.
@@ -72,6 +74,39 @@ rm -rf $RPM_BUILD_ROOT
 # -- changelog ----------------------------------------------------------------
 
 %changelog
+* Thu May 23 2013 Jay Dobies <jason.dobies@redhat.com> 1.0.32-1
+- Added empty strings as a possibility for optional parse methods
+  (jason.dobies@redhat.com)
+- Added copyright information (jason.dobies@redhat.com)
+
+* Wed May 22 2013 Jay Dobies <jason.dobies@redhat.com> 1.0.31-1
+- Renamed non-negative int parser (jason.dobies@redhat.com)
+- Added base set of parsers (jason.dobies@redhat.com)
+- Header standardization (jason.dobies@redhat.com)
+- Updated sample (jason.dobies@redhat.com)
+
+* Thu Feb 14 2013 Jay Dobies <jason.dobies@redhat.com> 1.0.30-1
+- Various clean up (jason.dobies@redhat.com)
+
+* Thu Feb 14 2013 Jay Dobies <jason.dobies@redhat.com> 1.0.29-1
+- Fixed deadlock when the threaded spinner times out (jason.dobies@redhat.com)
+
+* Tue Jan 08 2013 Jay Dobies <jason.dobies@redhat.com> 1.0.28-1
+- Added support for telling the user if an unexpected option was specified
+  (jason.dobies@redhat.com)
+- Remove Pulp references (jason.dobies@redhat.com)
+- Fixed class formatting (jason.dobies@redhat.com)
+
+* Thu Dec 06 2012 Jay Dobies <jason.dobies@redhat.com> 1.0.27-1
+- The full path to the section isn't known, so the usage was misleading since
+  it was missing the parent sections. The change for now is to simply not
+  include the path to the section and just inform the user of the
+  section/command relationship. (jason.dobies@redhat.com)
+- Fix to find closest match in the event a nested command is not found to make
+  sure the cloest matching subsection is returned (jason.dobies@redhat.com)
+- Reorganized code for pip standards (jason.dobies@redhat.com)
+- Clean up for handling of argument - prefixes (jason.dobies@redhat.com)
+
 * Fri Aug 24 2012 Jay Dobies <jason.dobies@redhat.com> 1.0.26-1
 - Added syntactic sugar methods to the CLI (jason.dobies@redhat.com)
 - Added keyword property to the Option class (jason.dobies@redhat.com)

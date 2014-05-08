@@ -1,9 +1,17 @@
-# This software is licensed to you under the GNU General Public License,
-# version 2 (GPLv2). There is NO WARRANTY for this software, express or
-# implied, including the implied warranties of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
-# along with this software; if not, see
-# http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
+# Copyright (c) 2011-2013 Jason Dobies
+#
+# This file is part of Okaara.
+#
+# Okaara is free software: you can redistribute it and/or modify it under the terms of the
+# GNU General Public License as published by the Free Software Foundation, either version 3
+# of the License, or (at your option) any later version.
+#
+# Okaara is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with Okaara.
+# If not, see <http://www.gnu.org/licenses/>.
 
 """
 Contains classes related to rendering progress indicators. Each object will
@@ -18,10 +26,11 @@ import time
 
 import okaara.prompt
 
+
 class ProgressBar:
 
-    def __init__(self, prompt, width=40, show_trailing_percentage=True, fill='=', left_tick='[', right_tick=']',
-                 in_progress_color=None, completed_color=None, render_tag=None):
+    def __init__(self, prompt, width=40, show_trailing_percentage=True, fill='=', left_tick='[',
+                 right_tick=']', in_progress_color=None, completed_color=None, render_tag=None):
         """
         :param prompt: prompt instance to write to
         :type  prompt: :py:class:`okaara.prompt.Prompt`
@@ -87,7 +96,7 @@ class ProgressBar:
         self.clear()
 
         # Generate bar
-        total_fill_width = self.width - (len(self.left_tick) + len(self.right_tick)) # subtract the leading/trailing ticks
+        total_fill_width = self.width - (len(self.left_tick) + len(self.right_tick))
         percentage = float(step) / float(total)
         fill_count = int(math.floor(percentage * total_fill_width))
 
@@ -321,9 +330,8 @@ class ThreadedSpinner(Spinner):
         self.timeout_seconds = timeout_seconds
 
         self.running = False
+        self._thread_running = False
         self.ellapsed_time = 0
-
-        self.lock = threading.Lock()
 
     def start(self):
         """
@@ -348,151 +356,39 @@ class ThreadedSpinner(Spinner):
         self.running = True
         self.ellapsed_time = 0
 
-        self.lock.acquire()
-
         thread = threading.Thread(target=self._run)
         thread.start()
 
-    def stop(self):
+    def stop(self, clear=False):
         """
         Causes the spinner to stop spinning. The thread is not immediately
-        killed but instead allowed to have trigger one more step in the
+        killed but instead allowed to trigger one more step in the
         sequence. This call will block until that step has been rendered. This
         shouldn't be noticable except in cases of a very high value for
         refresh_seconds.
         """
         self.running = False
-        self.lock.acquire() # block until the thread finishes so the user knows its done
-        self.lock.release() # release so start() can be called again
+
+        # Wait until the thread indicates it has completed
+        while self._thread_running:
+            time.sleep(self.refresh_seconds)
+
+        if clear:
+            self.clear()
 
     def iterator(self, iterable):
         raise NotImplementedError()
 
     def _run(self):
+        self._thread_running = True
+
         while self.running:
             self.next()
             time.sleep(self.refresh_seconds)
             self.ellapsed_time += self.refresh_seconds
 
             if self.ellapsed_time > self.timeout_seconds:
-                self.stop()
+                self.running = False
         self.next(finished=True)
-        self.lock.release()
 
-# -----------------------------------------------------------------------------
-
-def demo():
-    import okaara.prompt
-    p = okaara.prompt.Prompt()
-
-    pb = ProgressBar(p)
-
-    total = 21
-    for i in range(0, total + 1):
-        message = 'Step: %d of %d' % (i, total)
-
-        if i % 3 is 0:
-            message += '\nSecond line in message'
-
-        if i % 6 is 0:
-            message += '\nThird line in message'
-
-        pb.render(i, total, message)
-        time.sleep(.25)
-
-    p.write('Completed first progress bar example')
-    p.write('')
-
-    pb = ProgressBar(p, fill='*', left_tick='-<', right_tick='>-', show_trailing_percentage=False,
-                     in_progress_color=okaara.prompt.COLOR_LIGHT_YELLOW, completed_color=okaara.prompt.COLOR_LIGHT_GREEN)
-
-    total = 17
-    for i in range(0, total + 1):
-        pb.render(i, total)
-        time.sleep(.1)
-
-    p.write('Completed second progress bar example')
-    p.write('')
-
-    pb = ProgressBar(p)
-
-    items = 'a b c d e f g h i j k l m n o p'.split()
-    wrapped = pb.iterator(items, message_func=lambda x: 'Generated for item: %s' % x)
-
-    for w in wrapped:
-        # Do important stuff but don't worry about progress bar
-        time.sleep(.3)
-
-    p.write('Completed wrapped iteration through progress bar')
-    p.write('')
-
-    spinner = Spinner(p)
-
-    total = 10
-    for i in range(0, total):
-        spinner.next()
-        time.sleep(.25)
-
-    spinner.clear()
-    p.write('Completed first spinner example')
-    p.write('')
-
-    sequence = '! @ # $ %'.split()
-    spinner = Spinner(p, sequence=sequence, left_tick='{', right_tick='}',
-                      in_progress_color=okaara.prompt.COLOR_LIGHT_YELLOW, completed_color=okaara.prompt.COLOR_LIGHT_GREEN)
-
-    total = 10
-    for i in range(0, total):
-        finished = i == (total - 1)
-
-        spinner.next(finished=finished)
-        time.sleep(.25)
-
-    p.write('Completed second spinner example')
-    p.write('')
-
-    s = ThreadedSpinner(p, refresh_seconds=.1)
-
-    p.write('Starting threaded spinner, spinner should keep moving while this thread sleeps')
-
-    s.start()
-    time.sleep(3) # spinner should keep moving
-    s.stop()
-
-    p.write('Threaded spinner stopped')
-    p.write('')
-
-def multi_call_demo():
-    import okaara.prompt
-    p = okaara.prompt.Prompt()
-
-    s = ThreadedSpinner(p, refresh_seconds=3)
-
-    s.start()
-    time.sleep(.01)
-    s.stop()
-    p.write('Stopped 1')
-
-    s.start()
-    time.sleep(.01)
-    s.stop()
-    p.write('Stopped 2')
-
-def test():
-    import okaara.prompt
-    p = okaara.prompt.Prompt(wrap_width=20)
-
-    pb = ProgressBar(p)
-
-    total = 21
-    for i in range(0, total + 1):
-        message  = 'Step: %d of %d\n' % (i, total)
-        message += 'Second line 123456789012345678901234567890\n'
-        message += 'Third line\n'
-        message += 'Fourth line\n'
-
-        pb.render(i, total, message)
-        time.sleep(.15)
-
-if __name__ == '__main__':
-    test()
+        self._thread_running = False

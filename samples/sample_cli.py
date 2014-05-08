@@ -1,16 +1,25 @@
 #!/usr/bin/python
 #
-# This software is licensed to you under the GNU General Public License,
-# version 2 (GPLv2). There is NO WARRANTY for this software, express or
-# implied, including the implied warranties of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. You should have received a copy of GPLv2
-# along with this software; if not, see
-# http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
+# Copyright (c) 2011-2013 Jason Dobies
+#
+# This file is part of Okaara.
+#
+# Okaara is free software: you can redistribute it and/or modify it under the terms of the
+# GNU General Public License as published by the Free Software Foundation, either version 3
+# of the License, or (at your option) any later version.
+#
+# Okaara is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with Okaara.
+# If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 
-from okaara.prompt import Prompt, COLOR_LIGHT_CYAN, COLOR_LIGHT_BLUE
-from okaara.cli import Cli, Section, Command, Option, Flag
+from okaara.prompt import COLOR_LIGHT_CYAN, COLOR_LIGHT_BLUE
+from okaara.cli import Cli, Section, Command
+
 
 class SampleSectionOne(Section):
     def __init__(self, prompt):
@@ -18,11 +27,17 @@ class SampleSectionOne(Section):
         self.prompt = prompt
 
         # Optional Argument Demo
-        opt_arg_command = Command('opt-args', 'configured with multiple arguments, many optional', self.optional_args,
-                                  usage_description='Unspecified required arguments are listed at the bottom. The full ' \
-                                  'listing of specified arguments is displayed when successfully run.')
-        opt_arg_command.create_option('--required-1', 'required argument before this command will actually run', required=True)
-        opt_arg_command.create_option('--optional-1', 'optional argument, value will be displayed when specified', required=False)
+        usage = 'Unspecified required arguments are listed at the bottom. The full ' \
+                'listing of specified arguments is displayed when successfully run.'
+        opt_arg_command = Command('opt-args', 'configured with multiple arguments, many optional',
+                                  self.optional_args,
+                                  usage_description=usage)
+        opt_arg_command.create_option('--required-1',
+                                      'required argument before this command will actually run',
+                                      required=True)
+        opt_arg_command.create_option('--optional-1',
+                                      'optional argument, value will be displayed when specified',
+                                      required=False)
         opt_arg_command.create_option('--optional-2', 'another optional argument', required=False)
         self.add_command(opt_arg_command)
 
@@ -30,6 +45,7 @@ class SampleSectionOne(Section):
         self.prompt.write('Supplied Arguments:')
         for k, v in kwargs.items():
             self.prompt.write('Key: %-10s   Value: %s' % (k, v))
+
 
 class UsersSection(Section):
     def __init__(self, prompt):
@@ -48,6 +64,7 @@ class UsersSection(Section):
         self.prompt.write('Username: %s' % kwargs['username'])
         self.prompt.write('Password: %s' % kwargs['password'])
         self.prompt.write('Group:    %s' % kwargs['group'])
+
 
 class SampleCli(Cli):
     def __init__(self):
