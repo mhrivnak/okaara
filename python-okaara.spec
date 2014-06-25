@@ -3,7 +3,7 @@
 # -- headers ------------------------------------------------------------------
 
 Name:           python-okaara
-Version:        1.0.32
+Version:        1.0.34
 Release:        1%{?dist}
 Summary:        Python command line utilities
 
@@ -18,6 +18,7 @@ BuildRequires:  python-nose
 BuildRequires:  python-setuptools
 BuildRequires:  python-babel
 BuildRequires:  python2-devel
+BuildRequires:  python-mock
 
 Requires:       python-setuptools
 
@@ -74,6 +75,18 @@ rm -rf $RPM_BUILD_ROOT
 # -- changelog ----------------------------------------------------------------
 
 %changelog
+* Wed May 28 2014 Jay Dobies <jason.dobies@redhat.com> 1.0.34-1
+- Added build requirement on python-mock (jason.dobies@redhat.com)
+
+* Wed May 28 2014 Jay Dobies <jason.dobies@redhat.com> 1.0.33-1
+- fixing a bug where prompting for password in python 2.4 caused an error
+  (mhrivnak@redhat.com)
+- Updated project URL (jason.dobies@redhat.com)
+- Initial addition of extension functionality (jason.dobies@redhat.com)
+- Added simple validators for the Option validate_func
+  (jason.dobies@redhat.com)
+- Added general int parser (jason.dobies@redhat.com)
+
 * Thu May 23 2013 Jay Dobies <jason.dobies@redhat.com> 1.0.32-1
 - Added empty strings as a possibility for optional parse methods
   (jason.dobies@redhat.com)
